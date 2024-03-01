@@ -47,7 +47,8 @@ class AppleAccessToken extends AccessToken
                     try {
                         $decoded = JWT::decode($options['id_token'], $key);
                     } catch (\UnexpectedValueException $e) {
-                        $decoded = JWT::decode($options['id_token'], $key, ['RS256']);
+                        $jwtHeaders = (object) ['alg' => 'RS256'];
+                        $decoded = JWT::decode($options['id_token'], $key, $jwtHeaders);
                     }
                     break;
                 } catch (\Exception $exception) {
@@ -68,7 +69,7 @@ class AppleAccessToken extends AccessToken
             }
 
             if (isset($payload['is_private_email'])) {
-                $this->isPrivateEmail = $payload['is_private_email'];
+                $this->isPrivateEmail = $payload['is_private_email'] === 'true' || $payload['is_private_email'] === true;
             }
         }
 
@@ -86,7 +87,7 @@ class AppleAccessToken extends AccessToken
     /**
      * @return string
      */
-    public function getIdToken()
+    public function getIdToken(): string
     {
         return $this->idToken;
     }
@@ -94,7 +95,7 @@ class AppleAccessToken extends AccessToken
     /**
      * @return string
      */
-    public function getEmail()
+    public function getEmail(): string
     {
         return $this->email;
     }
@@ -102,7 +103,7 @@ class AppleAccessToken extends AccessToken
     /**
      * @return boolean
      */
-    public function isPrivateEmail()
+    public function isPrivateEmail(): string
     {
         return $this->isPrivateEmail;
     }

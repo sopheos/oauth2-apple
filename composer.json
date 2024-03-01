@@ -4,9 +4,9 @@
     "license": "MIT",
     "authors": [
         {
-            "name": "Patrick Bußmann",
-            "email": "patrick.bussmann@bussmann-it.de",
-            "homepage": "https://github.com/patrickbussmann"
+            "name": "Mathieu Froehly",
+            "email": "mathieu@sopheos.com",
+            "homepage": "https://github.com/sopheos"
         }
     ],
     "keywords": [
@@ -22,7 +22,7 @@
         "ext-json": "*",
         "league/oauth2-client": "^2.0",
         "firebase/php-jwt": "^5.2 || ^6.0",
-        "lcobucci/jwt": "^3.4 || ^4.0"
+        "lcobucci/jwt": "^4.0 || ^5.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^5.7 || ^6.0 || ^9.3",
