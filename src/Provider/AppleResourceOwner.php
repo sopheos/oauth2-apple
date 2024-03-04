@@ -1,4 +1,6 @@
-<?php namespace League\OAuth2\Client\Provider;
+<?php
+
+namespace League\OAuth2\Client\Provider;
 
 use League\OAuth2\Client\Tool\ArrayAccessorTrait;
 
@@ -74,6 +76,11 @@ class AppleResourceOwner extends GenericResourceOwner
         if (isset($name)) {
             return $name['lastName'];
         }
+        return null;
+    }
+
+    public function getName()
+    {
         return null;
     }
 
