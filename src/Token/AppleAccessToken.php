@@ -8,20 +8,9 @@ use InvalidArgumentException;
 
 class AppleAccessToken extends AccessToken
 {
-    /**
-     * @var string
-     */
-    protected $idToken;
-
-    /**
-     * @var string
-     */
-    protected $email;
-
-    /**
-     * @var boolean
-     */
-    protected $isPrivateEmail;
+    protected string $idToken = "";
+    protected string $email = "";
+    protected bool $isPrivateEmail = false;
 
     /**
      * Constructs an access token.
@@ -75,13 +64,8 @@ class AppleAccessToken extends AccessToken
 
         parent::__construct($options);
 
-        if (isset($options['id_token'])) {
-            $this->idToken = $options['id_token'];
-        }
-
-        if (isset($options['email'])) {
-            $this->email = $options['email'];
-        }
+        $this->idToken = $options['id_token'] ?? '';
+        $this->email = $options['email'] ?? '';
     }
 
     /**
