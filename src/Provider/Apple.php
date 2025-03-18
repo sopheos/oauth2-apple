@@ -4,11 +4,8 @@ namespace League\OAuth2\Client\Provider;
 
 use Exception;
 use Firebase\JWT\JWK;
+use Firebase\JWT\JWT;
 use InvalidArgumentException;
-use Lcobucci\JWT\Configuration;
-use Lcobucci\JWT\Signer;
-use Lcobucci\JWT\Signer\Key;
-use Lcobucci\JWT\Signer\Key\InMemory;
 use League\OAuth2\Client\Grant\AbstractGrant;
 use League\OAuth2\Client\Provider\Exception\AppleAccessDeniedException;
 use League\OAuth2\Client\Token\AccessToken;
@@ -26,22 +23,24 @@ class Apple extends AbstractProvider
      *
      * @var array
      */
-    public $defaultScopes = ['name', 'email'];
+    public array $defaultScopes = ['name', 'email'];
 
     /**
      * @var string the team id
      */
-    protected $teamId;
+    protected string $teamId = '';
 
     /**
      * @var string the key file id
      */
-    protected $keyFileId;
+    protected string $keyFileId = '';
 
     /**
      * @var string the key file path
      */
-    protected $keyFilePath;
+    protected string $keyFilePath = '';
+
+    protected ?string $keyCache = null;
 
     /**
      * Constructs Apple's OAuth 2.0 service provider.
@@ -153,16 +152,6 @@ class Apple extends AbstractProvider
     }
 
     /**
-     * Get revoke token url to revoke token
-     *
-     * @return string
-     */
-    public function getBaseRevokeTokenUrl(array $params)
-    {
-        return 'https://appleid.apple.com/auth/revoke';
-    }
-
-    /**
      * Get provider url to fetch user details
      *
      * @param AccessToken $token
@@ -242,89 +231,31 @@ class Apple extends AbstractProvider
      */
     public function getAccessToken($grant, array $options = [])
     {
-        $configuration = $this->getConfiguration();
-        $time = new \DateTimeImmutable();
-        $time = $time->setTime($time->format('H'), $time->format('i'), $time->format('s'));
-        $expiresAt = $time->modify('+1 Hour');
-        $expiresAt = $expiresAt->setTime($expiresAt->format('H'), $expiresAt->format('i'), $expiresAt->format('s'));
-
-        $token = $configuration->builder()
-            ->issuedBy($this->teamId)
-            ->permittedFor('https://appleid.apple.com')
-            ->issuedAt($time)
-            ->expiresAt($expiresAt)
-            ->relatedTo($this->clientId)
-            ->withHeader('alg', 'ES256')
-            ->withHeader('kid', $this->keyFileId)
-            ->getToken($configuration->signer(), $configuration->signingKey());
+        $clientSecret = JWT::encode([
+            'iss' => $this->teamId,
+            'iat' => time(),
+            'exp' => strtotime('+1 hour'),
+            'aud' => 'https://appleid.apple.com',
+            'sub' => $this->clientId,
+        ], $this->getLocalKey(), 'ES256', $this->keyFileId);
 
         $options += [
-            'client_secret' => $token->toString()
+            'client_secret' => $clientSecret
         ];
 
         return parent::getAccessToken($grant, $options);
     }
 
-    /**
-     * Revokes an access or refresh token using a specified token.
-     *
-     * @param string $token
-     * @param string|null $tokenTypeHint
-     * @return \Psr\Http\Message\RequestInterface
-     */
-    public function revokeAccessToken($token, $tokenTypeHint = null)
+    private function getLocalKey(): string
     {
-        $configuration = $this->getConfiguration();
-        $time = new \DateTimeImmutable();
-        $time = $time->setTime($time->format('H'), $time->format('i'), $time->format('s'));
-        $expiresAt = $time->modify('+1 Hour');
-        $expiresAt = $expiresAt->setTime($expiresAt->format('H'), $expiresAt->format('i'), $expiresAt->format('s'));
+        if ($this->keyCache === null) {
+            if (! is_file($this->keyFilePath)) {
+                throw new InvalidArgumentException("keyFilePath not found {$this->keyFilePath}");
+            }
 
-        $clientSecret = $configuration->builder()
-            ->issuedBy($this->teamId)
-            ->permittedFor('https://appleid.apple.com')
-            ->issuedAt($time)
-            ->expiresAt($expiresAt)
-            ->relatedTo($this->clientId)
-            ->withHeader('alg', 'ES256')
-            ->withHeader('kid', $this->keyFileId)
-            ->getToken($configuration->signer(), $configuration->signingKey());
-
-        $params = [
-            'client_id'     => $this->clientId,
-            'client_secret' => $clientSecret->toString(),
-            'token'         => $token
-        ];
-        if ($tokenTypeHint !== null) {
-            $params += [
-                'token_type_hint' => $tokenTypeHint
-            ];
+            $this->keyCache = trim(file_get_contents($this->keyFilePath) ?: '');
         }
 
-        $method  = $this->getAccessTokenMethod();
-        $url     = $this->getBaseRevokeTokenUrl($params);
-        $options = $this->optionProvider->getAccessTokenOptions(self::METHOD_POST, $params);
-        $request = $this->getRequest($method, $url, $options);
-
-        return $this->getParsedResponse($request);
-    }
-
-    /**
-     * @return Configuration
-     */
-    public function getConfiguration()
-    {
-        return Configuration::forSymmetricSigner(
-            new Signer\Ecdsa\Sha256(),
-            $this->getLocalKey()
-        );
-    }
-
-    /**
-     * @return Key
-     */
-    public function getLocalKey()
-    {
-        return InMemory::file($this->keyFilePath);
+        return $this->keyCache;
     }
 }
