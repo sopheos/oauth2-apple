@@ -65,6 +65,11 @@ class AppleResourceOwner extends GenericResourceOwner
         return $this->resourceOwnerId;
     }
 
+    public function getName()
+    {
+        return $this->getFirstName();
+    }
+
     /**
      * Get user last name
      *
