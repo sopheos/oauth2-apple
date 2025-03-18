@@ -79,11 +79,6 @@ class AppleResourceOwner extends GenericResourceOwner
         return null;
     }
 
-    public function getName()
-    {
-        return null;
-    }
-
     /**
      * Get user email, if available
      *

@@ -87,7 +87,7 @@ class AppleAccessToken extends AccessToken
     /**
      * @return boolean
      */
-    public function isPrivateEmail(): string
+    public function isPrivateEmail(): bool
     {
         return $this->isPrivateEmail;
     }

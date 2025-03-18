@@ -6,9 +6,9 @@ use Exception;
 use Firebase\JWT\JWK;
 use InvalidArgumentException;
 use Lcobucci\JWT\Configuration;
-use Lcobucci\JWT\Signer\Key\InMemory;
 use Lcobucci\JWT\Signer;
 use Lcobucci\JWT\Signer\Key;
+use Lcobucci\JWT\Signer\Key\InMemory;
 use League\OAuth2\Client\Grant\AbstractGrant;
 use League\OAuth2\Client\Provider\Exception\AppleAccessDeniedException;
 use League\OAuth2\Client\Token\AccessToken;
@@ -199,8 +199,15 @@ class Apple extends AbstractProvider
     protected function checkResponse(ResponseInterface $response, $data)
     {
         if ($response->getStatusCode() >= 400) {
+            $message = $response->getReasonPhrase();
+            if (array_key_exists('error', $data)) {
+                $message = $data['error'];
+            }
+            if (array_key_exists('error_description', $data)) {
+                $message .= ': ' . $data['error_description'];
+            }
             throw new AppleAccessDeniedException(
-                array_key_exists('error', $data) ? $data['error'] : $response->getReasonPhrase(),
+                $message,
                 array_key_exists('code', $data) ? $data['code'] : $response->getStatusCode(),
                 $response
             );
@@ -296,11 +303,7 @@ class Apple extends AbstractProvider
 
         $method  = $this->getAccessTokenMethod();
         $url     = $this->getBaseRevokeTokenUrl($params);
-        if (property_exists($this, 'optionProvider')) {
-            $options = $this->optionProvider->getAccessTokenOptions(self::METHOD_POST, $params);
-        } else {
-            $options = $this->getAccessTokenOptions($params);
-        }
+        $options = $this->optionProvider->getAccessTokenOptions(self::METHOD_POST, $params);
         $request = $this->getRequest($method, $url, $options);
 
         return $this->getParsedResponse($request);
@@ -311,17 +314,10 @@ class Apple extends AbstractProvider
      */
     public function getConfiguration()
     {
-        if (method_exists(Signer\Ecdsa\Sha256::class, 'create')) {
-            return Configuration::forSymmetricSigner(
-                Signer\Ecdsa\Sha256::create(),
-                $this->getLocalKey()
-            );
-        } else {
-            return Configuration::forSymmetricSigner(
-                new Signer\Ecdsa\Sha256(),
-                $this->getLocalKey()
-            );
-        }
+        return Configuration::forSymmetricSigner(
+            new Signer\Ecdsa\Sha256(),
+            $this->getLocalKey()
+        );
     }
 
     /**
